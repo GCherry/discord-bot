@@ -1,13 +1,19 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using Microsoft.Extensions.Logging;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace Tutorial.Modules
 {
-    public class GeneralCommands : ModuleBase
+    public class GeneralCommands : ModuleBase<SocketCommandContext>
     {
+        private readonly ILogger<GeneralCommands> _logger;
+
+        public GeneralCommands(ILogger<GeneralCommands> logger)
+            => _logger = logger;
+
         /// <summary>
         /// Standard command example
         /// </summary>
@@ -15,7 +21,8 @@ namespace Tutorial.Modules
         [Command("ping")]
         public async Task Ping()
         {
-            await Context.Channel.SendMessageAsync("Pong!");
+            await ReplyAsync("I'm alive!");
+            _logger.LogInformation($"{Context.User.Username} executed the ping command!");
         }
 
         /// <summary>
@@ -32,7 +39,7 @@ namespace Tutorial.Modules
             // Build the message
             var builder = new EmbedBuilder()
                 .WithThumbnailUrl(currentUser.GetAvatarUrl() ?? currentUser.GetDefaultAvatarUrl())
-                .WithDescription("With this message you can see some information about yourself!")
+                .WithDescription($"With this message you can see some information about {currentUser.Username}!")
                 .WithColor(new Color(245, 212, 66))
                 .AddField("User ID", currentUser.Id, true)
                 .AddField("Discriminator", currentUser.Discriminator, true)
@@ -44,32 +51,16 @@ namespace Tutorial.Modules
             var embed = builder.Build();
 
             // Send message to channel
-            await Context.Channel.SendMessageAsync(null, false, embed);
+            await ReplyAsync(null, false, embed);
+            _logger.LogInformation($"{Context.User.Username} executed the info command!");
         }
+
+
 
         /// <summary>
-        /// Delete X number of the latest messages in the current channel
+        /// Get server information
         /// </summary>
-        /// <param name="amount"></param>
-        /// <returns>Success/Fail message</returns>
-        [Command("purge")]
-        [RequireUserPermission(GuildPermission.ManageMessages)]
-        public async Task Purge(int amount)
-        {
-            var socketTextChannel = Context.Channel as SocketTextChannel;
-
-            // Send message to channel
-            var messages = await Context.Channel.GetMessagesAsync(amount + 1).FlattenAsync();
-
-            // Delete messages
-            await socketTextChannel.DeleteMessagesAsync(messages);
-
-            // Send message to channel
-            var message = await Context.Channel.SendMessageAsync($"{messages.Count()} messages deleted successfully!");
-            await Task.Delay(2500);
-            await message.DeleteAsync();
-        }
-
+        /// <returns>Server info</returns>
         [Command("server")]
         public async Task Server()
         {
@@ -83,12 +74,16 @@ namespace Tutorial.Modules
                 .WithColor(new Color(245, 212, 66))
                 .AddField("Created at", Context.Guild.CreatedAt.ToString("MM/dd/yyyy"), true)
                 .AddField("Member Count", socketGuild.MemberCount + " members", true)
+                .AddField("Online Users", socketGuild.Users.Where(x=> x.Status != UserStatus.Offline).Count() + " members", true)
                 .AddField("Boost Level", socketGuild.PremiumTier, true);
 
             var embed = builder.Build();
 
             // Send the message to the channel
-            await Context.Channel.SendMessageAsync(null, false, embed);
+            await ReplyAsync(null, false, embed);
+            _logger.LogInformation($"{Context.User.Username} executed the server command!");
         }
+
+
     }
 }
