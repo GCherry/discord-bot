@@ -21,6 +21,30 @@ namespace Tutorial.Services
             _config = config;
 
             _discord.Ready += OnReady;
+            _discord.MessageReceived += OnMessageReceived;
+        }
+
+        private async Task OnMessageReceived(SocketMessage arg)
+        {
+            var msg = arg as SocketUserMessage;
+
+            if (msg.Author.IsBot) return;
+
+            var context = new SocketCommandContext(_discord, msg);
+
+            var pos = 0;
+            if (msg.HasStringPrefix(_config["prefix"], ref pos) || msg.HasMentionPrefix(_discord.CurrentUser, ref pos))
+            {
+                var result = await _commands.ExecuteAsync(context, pos, _provider);
+
+                if (!result.IsSuccess)
+                {
+                    var reason = result.Error;
+                    await context.Channel.SendMessageAsync($"The follwing error occured: \n {reason}");
+
+                    Console.WriteLine(reason);
+                }
+            }
         }
 
         private Task OnReady()
