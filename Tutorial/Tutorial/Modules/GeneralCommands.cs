@@ -55,8 +55,6 @@ namespace Tutorial.Modules
             _logger.LogInformation($"{Context.User.Username} executed the info command!");
         }
 
-
-
         /// <summary>
         /// Get server information
         /// </summary>

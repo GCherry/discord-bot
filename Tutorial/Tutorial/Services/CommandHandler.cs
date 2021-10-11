@@ -8,6 +8,7 @@ using Discord.Addons.Hosting;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
+using Tutorial.DataAccess.MSSQL.Interfaces;
 
 namespace Tutorial.Services
 {
@@ -17,13 +18,15 @@ namespace Tutorial.Services
         private readonly DiscordSocketClient _client;
         private readonly CommandService _service;
         private readonly IConfiguration _config;
+        private readonly IServerRepository _servers;
 
-        public CommandHandler(IServiceProvider provider, DiscordSocketClient client, CommandService service, IConfiguration config)
+        public CommandHandler(IServiceProvider provider, DiscordSocketClient client, CommandService service, IConfiguration config, IServerRepository servers)
         {
             _provider = provider;
             _client = client;
             _service = service;
             _config = config;
+            _servers = servers;
         }
 
         public override async Task InitializeAsync(CancellationToken cancellationToken)
@@ -65,8 +68,13 @@ namespace Tutorial.Services
             if (!(arg is SocketUserMessage message)) return;
             if (message.Source != MessageSource.User) return;
 
+            var guildChannel = message.Channel as SocketGuildChannel;
+
             var argPos = 0;
-            if (!message.HasStringPrefix(_config["prefix"], ref argPos) && !message.HasMentionPrefix(_client.CurrentUser, ref argPos)) return;
+
+            var prefix = await _servers.GetGuildPrefix(guildChannel.Guild.Id) ?? _config["prefix"];
+
+            if (!message.HasStringPrefix(prefix, ref argPos) && !message.HasMentionPrefix(_client.CurrentUser, ref argPos)) return;
 
             var context = new SocketCommandContext(_client, message);
             await _service.ExecuteAsync(context, argPos, _provider);
